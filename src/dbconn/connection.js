@@ -4,7 +4,7 @@ const APPCONSTANTS = require(path.resolve("appconstants"));
 
 var host = "localhost";
 var username = "root";
-var database = "sonetschool";
+var database = "onefxlive";
 var password = "";
 var dialect = APPCONSTANTS.DIALECT;
 var port = process.env.DBPORT;

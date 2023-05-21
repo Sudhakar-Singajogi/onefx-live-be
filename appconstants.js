@@ -24,7 +24,7 @@ module.exports = {
     DBUSER: "root",
     DBPASSWORD: "",
     DBHOST: "localhost",
-    DATABASE: "express-bootstrap",
+    DATABASE: "onefxlive",
 
     // DBUSER: "pranay",
     // DATABASE: "sonet_school",
