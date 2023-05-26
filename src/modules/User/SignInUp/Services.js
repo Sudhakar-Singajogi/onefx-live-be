@@ -1,10 +1,11 @@
 const path = require("path");
 const Utils = require(path.resolve("src/utils"));
 const UserModel = require(path.resolve("src/modules/User/SignInUp/Users"));
-const ActivatioCodeModel = require(path.resolve(
+const ActivationCodeModel = require(path.resolve(
   "src/modules/User/SignInUp/ActivationCodes"
 ));
 const { Op } = require("sequelize");
+const md5 = require("md5");
 
 const errHandler = (err) => {
   console.log("Error:", err);
@@ -12,7 +13,7 @@ const errHandler = (err) => {
 
 const bringUsers = async (obj) => {
   const excludeFields = ["createdAt", "updatedAt"];
-  console.log("object is", obj);
+  
   let orderBy = ["userId", "DESC"];
   if (obj.hasOwnProperty("orderBy")) {
     orderBy = obj.orderBy;
@@ -65,8 +66,7 @@ var self = (module.exports = {
       } else {
         return await Utils.returnResult("users", false, "No records found");
       }
-    } catch (err) {
-      console.log("syntax:", err);
+    } catch (err) { 
       return await Utils.catchError("Get users of a user", err);
     }
   },
@@ -107,8 +107,7 @@ var self = (module.exports = {
       } else {
         return await Utils.returnResult("users", false, "No records found");
       }
-    } catch (err) {
-      console.log("syntax:", err);
+    } catch (err) { 
       return await Utils.catchError("Get users of a user", err);
     }
   },
@@ -136,10 +135,8 @@ var self = (module.exports = {
         code: encrypteduserActivationId,
         expiryTime: activatationCodeExpiry,
       };
-
-      console.log("activateCodeModelObj:", activateCodeModelObj);
-
-      await ActivatioCodeModel.create({
+      
+      await ActivationCodeModel.create({
         ...activateCodeModelObj,
         logging: (sql, queryObject) => {
           Utils.loglastExecuteQueryToWinston(
@@ -175,17 +172,14 @@ var self = (module.exports = {
     }
   },
   activate: async (reqObj) => {
-    console.log("timenow is:", Date.now());
 
     const rsSet = await Utils.findOne({
-      model: ActivatioCodeModel,
+      model: ActivationCodeModel,
       fetchRowCond: {
         code: reqObj.activationCode,
         expiryTime: { [Op.gte]: Date.now() },
       },
     });
-
-    console.log('respo:', rsSet)
 
     if (!rsSet.resultSet) {
       rsSet.ValidationErrors = {
@@ -202,7 +196,7 @@ var self = (module.exports = {
     await UserModel.update(setStatus,cond);
 
     //delete the activation code
-    await ActivatioCodeModel.destroy({
+    await ActivationCodeModel.destroy({
       where: { code: reqObj.activationCode },
     });
 
@@ -210,4 +204,27 @@ var self = (module.exports = {
 
     return await Utils.returnResult("userCreation", rsSet);
   },
+
+  signIn:async(reqObj) => {
+    const user = await Utils.findOne({
+      model: UserModel,
+      excludes:['password', 'referrer'],
+      fetchRowCond: {
+        [Op.or]: [{ email: reqObj.userId }, { userName: reqObj.userId }], 
+        [Op.and]:[{password: md5(reqObj.password)}, {status:1}]
+       },
+    });
+    
+    if(!user.resultSet) {
+      user.ValidationErrors = {
+        Error: "Invalid credentials, please chek your userid and password",
+      };
+      return await Utils.returnResult("userCreation", user);
+
+    } 
+    
+    return user
+      ? await Utils.returnResult("user", user)
+      : await Utils.returnResult("user", user, "No record found");
+  }
 });

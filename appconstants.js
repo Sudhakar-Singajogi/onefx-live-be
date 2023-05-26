@@ -57,7 +57,7 @@ module.exports = {
     INVALIDUSERCREDENTIALS: {
         "result": "OK",
         "resultCode": "422",
-        "message": "Invalid User Credentials"
+        "message": "Invalid user credentials or may be user is inactive"
     },
     ACCESSTOKENREQUIRED: {
         "result": "OK",

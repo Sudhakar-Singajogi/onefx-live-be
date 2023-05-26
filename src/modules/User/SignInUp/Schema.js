@@ -5,7 +5,13 @@ const signUpSchema = Joi.object().keys({
   password: Joi.string().min(6).max(12).required(),
 });
 
+const signInSchema = Joi.object().keys({ 
+  userId: Joi.string().required(),
+  password: Joi.string().required(),
+});
+
 const schemas = {
     signUpSchema,
+    signInSchema
 };
 module.exports = schemas;

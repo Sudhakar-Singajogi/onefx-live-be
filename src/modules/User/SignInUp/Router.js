@@ -5,7 +5,11 @@ const Utils = require(path.resolve("src/utils"));
 const Service = require(path.resolve("src/modules/User/SignInUp/Services"))
 const md5 = require("md5");
 const { joiMiddleware } = require(path.resolve("src/initializer/framework"));
-const { signUpSchema } =  require(path.resolve("src/modules/user/SignInUp/Schema"));
+const { signUpSchema, signInSchema } =  require(path.resolve("src/modules/user/SignInUp/Schema"));
+const {
+    jwtAuthenticate,
+    jwtAuthorise,
+  } = require(path.resolve("src/jwt/jwt-auth-authorize"));
 
 
 router.get("/user/:id", async(req, res) => {
@@ -32,15 +36,15 @@ router.get("/users", async(req, res) => {
     await Utils.retrunResponse(res, resultSet);
 })
 
-router.post("/signin", async(req, res) => {
-    let resultSet = {
-        message:"User Signin-up module",
-        result:[],
-        totalRows:0
-    };
+// router.post("/signin", async(req, res) => {
+//     let resultSet = {
+//         message:"User Signin-up module",
+//         result:[],
+//         totalRows:0
+//     };
 
-    await Utils.retrunResponse(res, resultSet);
-})
+//     await Utils.retrunResponse(res, resultSet);
+// })
 
 router.post("/", joiMiddleware(signUpSchema), async(req, res) => {
     const randomString = await Utils.generateRandomString(8); 
@@ -62,5 +66,7 @@ router.get("/activate/:activationCode",  async(req, res) => {
     let resultSet = await Service.activate({activationCode:req.params.activationCode})
     await Utils.retrunResponse(res, resultSet);
 })
+
+router.post("/signin", joiMiddleware(signInSchema), jwtAuthenticate(),  async(req, res) => {  })
 
 module.exports = router;

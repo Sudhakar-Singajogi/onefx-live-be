@@ -528,9 +528,16 @@ async function findOne(obj) {
     },
   };
 
+  if(obj.hasOwnProperty('excludes')) {    
+    params.attributes.exclude = [...params.attributes.exclude, ...obj.excludes ];
+  }
+
+
   if (obj.hasOwnProperty("fetchRowCond")) {
     params.where = obj.fetchRowCond;
   }
+
+  console.log('props', params)
 
   const model = obj.model;
   try {
@@ -547,8 +554,7 @@ async function findOne(obj) {
       errorMs: error,
     };
   }
-
-  return resultSet ? resultSet : [];
+  
 }
 
 async function getCurrentDateTimeYMD() {
