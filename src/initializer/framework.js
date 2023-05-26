@@ -30,8 +30,11 @@ const applicationModules = sequelize.define("Modules", {
 
 const joiMiddleware = (schema, property = false) => {
   return async (req, res, next) => {
+    
+    console.log('requested body is:', req.body);
+
     const { error } = Joi.validate(req.body, schema);
-    console.log('joiMiddleware: ', error)
+    console.log('joiMiddleware errros are : ', error)
     const valid = error == null;
     if (valid) {
       next();

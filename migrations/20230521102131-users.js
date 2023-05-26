@@ -22,7 +22,7 @@ module.exports = {
         type: Sequelize.STRING(256),
         allowNull: false,
       },
-      referrerId:{
+      referrer:{
         type: Sequelize.INTEGER(11),
         allowNull: true,
       },

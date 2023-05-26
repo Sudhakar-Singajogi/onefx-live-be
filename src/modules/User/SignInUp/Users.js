@@ -28,7 +28,7 @@ module.exports = sequelize.define("users", {
   status: {
     type: Sequelize.ENUM("1", "0"),
     allowNull: false,
-    defaultValue: "1",
+    defaultValue: "0",
   },
 });
 

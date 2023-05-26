@@ -3,6 +3,10 @@ const router = express.Router();
 const path = require("path");
 const Utils = require(path.resolve("src/utils"));
 const Service = require(path.resolve("src/modules/User/SignInUp/Services"))
+const md5 = require("md5");
+const { joiMiddleware } = require(path.resolve("src/initializer/framework"));
+const { signUpSchema } =  require(path.resolve("src/modules/user/SignInUp/Schema"));
+
 
 router.get("/user/:id", async(req, res) => {
     // let resultSet = {
@@ -38,13 +42,24 @@ router.post("/signin", async(req, res) => {
     await Utils.retrunResponse(res, resultSet);
 })
 
-router.post("/signup", async(req, res) => {
-    let resultSet = {
-        message:"User Signin-up module",
-        result:[],
-        totalRows:0
-    };
+router.post("/", joiMiddleware(signUpSchema), async(req, res) => {
+    const randomString = await Utils.generateRandomString(8); 
+    req.body = {
+        userName:randomString,
+        email:randomString+"@mailinator.com",
+        password:md5(randomString),
+        referrer:null
+      }
 
+    var resultSet = await Service.signUp(req); 
+    await Utils.retrunResponse(res, resultSet);
+})
+
+router.get("/activate/:activationCode",  async(req, res) => {
+    console.log(req.params.activationCode)
+     // Get the current time in milliseconds
+
+    let resultSet = await Service.activate({activationCode:req.params.activationCode})
     await Utils.retrunResponse(res, resultSet);
 })
 
