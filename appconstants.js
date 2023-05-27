@@ -64,6 +64,11 @@ module.exports = {
         "resultCode": "401",
         "message": "Access Token is required"
     },
+    INVALIDTOKEN: {
+        "result": "OK",
+        "resultCode": "401",
+        "message": "Access Token or refreshToken is invalid"
+    },
     OK: "OK",
     MAILSENT: "mail sent",
     ERRMSG: "error message",
