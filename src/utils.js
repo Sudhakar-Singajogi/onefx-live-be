@@ -28,7 +28,7 @@ async function returnResult(
   totalRecords = null
 ) {
   console.log("got obj as", object);
-  if (object && !object.hasOwnProperty("ValidationErrors")) {
+  if (object && !object.hasOwnProperty("ValidationErrors")  && !object.hasOwnProperty("DBErrors") ) {
     return customMsg != null
       ? { message: customMsg, result: [] }
       : {
@@ -42,6 +42,16 @@ async function returnResult(
         ? { message: customMsg, result: [] }
         : {
             message: "Validation Errors",
+            result: object,
+            totalRows: 0,
+          };
+    }
+
+    if (object && object.hasOwnProperty("DBErrors")) {
+      return customMsg != null
+        ? { message: customMsg, result: [] }
+        : {
+            message: "DB operation failed",
             result: object,
             totalRows: 0,
           };
@@ -75,10 +85,20 @@ async function retrunResponse(res, Obj) {
     ValidationErrors = Obj.result.ValidationErrors;
     Obj.result = [];
   }
+
+  if (Obj.message.includes("DB operation failed")) {
+    resultCode = 200;
+    Obj.message = Obj.message.split(" for key")[0].replace(/'/g, "");
+    ValidationErrors = Obj.result.DBErrors;
+    Obj.result = [];
+  }
+
   if (Obj.message.includes("Unauthorized")) {
     resultCode = 401;
     Obj.message = Obj.message.split(" for key")[0].replace(/'/g, "");
   }
+
+  
 
   return res.status(resultCode).json({
     result: "OK",
@@ -532,9 +552,12 @@ async function findOne(obj) {
     params.attributes.exclude = [...params.attributes.exclude, ...obj.excludes ];
   }
 
-
   if (obj.hasOwnProperty("fetchRowCond")) {
     params.where = obj.fetchRowCond;
+  }
+
+  if(obj.hasOwnProperty("order")) {
+    params.order = [obj.order]
   }
 
   console.log('props', params)
@@ -597,6 +620,41 @@ const encryptData = (data) => {
   return encrypted;
 };
 
+async function updateData(model, data, cond) {
+  try {
+    await model.update(data,cond);
+    return {
+      error:false,
+      errorMessage:''
+    }
+
+  } catch(err) {
+    return {
+      error:true,
+      errorMessage:err
+    }
+  }
+}
+
+function convertStringToUpperLowercase(str, textCase="upper") {
+  let convertedString = '';
+  
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charAt(i);
+    
+    if (/[a-zA-Z]/.test(char)) {
+      convertedString += char.toUpperCase();
+      if(textCase === 'lower') {
+        convertedString += char.toLowerCase();  
+      }
+    } else {
+      convertedString += char;
+    }
+  }
+  
+  return convertedString;
+}
+
 
 module.exports = {
   getDateTime,
@@ -631,4 +689,6 @@ module.exports = {
   getCurrentDateTimeYMD,
   sendMail,
   encryptData,
+  updateData,
+  convertStringToUpperLowercase
 };

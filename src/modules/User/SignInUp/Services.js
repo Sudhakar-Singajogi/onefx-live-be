@@ -1,9 +1,15 @@
 const path = require("path");
 const Utils = require(path.resolve("src/utils"));
 const UserModel = require(path.resolve("src/modules/User/SignInUp/Users"));
+const ResetPwdCodeModel = require(path.resolve("src/modules/User/SignInUp/ResetPasswordCodes"));
 const ActivationCodeModel = require(path.resolve(
   "src/modules/User/SignInUp/ActivationCodes"
 ));
+const emailtemplates = require(path.resolve("src/emailtemplates/templates"));
+
+console.log('email templates:', emailtemplates.sendpasswordresetcode)
+
+
 const { Op } = require("sequelize");
 const md5 = require("md5");
 
@@ -13,7 +19,7 @@ const errHandler = (err) => {
 
 const bringUsers = async (obj) => {
   const excludeFields = ["createdAt", "updatedAt"];
-  
+
   let orderBy = ["userId", "DESC"];
   if (obj.hasOwnProperty("orderBy")) {
     orderBy = obj.orderBy;
@@ -66,7 +72,7 @@ var self = (module.exports = {
       } else {
         return await Utils.returnResult("users", false, "No records found");
       }
-    } catch (err) { 
+    } catch (err) {
       return await Utils.catchError("Get users of a user", err);
     }
   },
@@ -107,7 +113,7 @@ var self = (module.exports = {
       } else {
         return await Utils.returnResult("users", false, "No records found");
       }
-    } catch (err) { 
+    } catch (err) {
       return await Utils.catchError("Get users of a user", err);
     }
   },
@@ -135,7 +141,7 @@ var self = (module.exports = {
         code: encrypteduserActivationId,
         expiryTime: activatationCodeExpiry,
       };
-      
+
       await ActivationCodeModel.create({
         ...activateCodeModelObj,
         logging: (sql, queryObject) => {
@@ -172,7 +178,6 @@ var self = (module.exports = {
     }
   },
   activate: async (reqObj) => {
-
     const rsSet = await Utils.findOne({
       model: ActivationCodeModel,
       fetchRowCond: {
@@ -189,11 +194,11 @@ var self = (module.exports = {
     }
 
     const userId = rsSet.resultSet.userId;
-    
+
     // activate the user.
-    const setStatus = { status: "1"}
-    const cond = {where:{userId:userId}}
-    await UserModel.update(setStatus,cond);
+    const setStatus = { status: "1" };
+    const cond = { where: { userId: userId } };
+    await UserModel.update(setStatus, cond);
 
     //delete the activation code
     await ActivationCodeModel.destroy({
@@ -205,26 +210,141 @@ var self = (module.exports = {
     return await Utils.returnResult("userCreation", rsSet);
   },
 
-  signIn:async(reqObj) => {
+  signIn: async (reqObj) => {
     const user = await Utils.findOne({
       model: UserModel,
-      excludes:['password', 'referrer'],
+      excludes: ["password", "referrer"],
       fetchRowCond: {
-        [Op.or]: [{ email: reqObj.userId }, { userName: reqObj.userId }], 
-        [Op.and]:[{password: md5(reqObj.password)}, {status:1}]
-       },
+        [Op.or]: [{ email: reqObj.userId }, { userName: reqObj.userId }],
+        [Op.and]: [{ password: md5(reqObj.password) }, { status: 1 }],
+      },
     });
-    
-    if(!user.resultSet) {
+
+    if (!user.resultSet) {
       user.ValidationErrors = {
         Error: "Invalid credentials, please chek your userid and password",
       };
       return await Utils.returnResult("userCreation", user);
+    }
 
-    } 
+    return user
+      ? await Utils.returnResult("user", user)
+      : await Utils.returnResult("user", user, "No record found");
+  },
+  sendpasswordresetcode: async (email) => {
+    const user = await Utils.findOne({
+      model: UserModel,
+      excludes: ["password", "referrer"],
+      fetchRowCond: {
+        [Op.or]: [{ email: email }],
+      },
+    });
+
+    const userName = user.resultSet.userName;
+
+    if (!user.resultSet) {
+      user.ValidationErrors = {
+        Error: "Check your entered email",
+      };
+      return await Utils.returnResult("sendpasswordresetcode", user);
+    }
+
+    let resetPwdCode = await Utils.generateRandomString(6);
+    resetPwdCode = Utils.convertStringToUpperLowercase(resetPwdCode);
+
+    const currentTime = Date.now();
+
+    // Set the desired time (24 hours in this example)
+    const desiredTime = new Date(currentTime);
+    desiredTime.setHours(24, 0, 0, 0);
+    const codeExpiry = desiredTime.getTime();
+
+    //store the reset code again the userId
+    const resetpwdCodeModelObj = {
+      email: email,
+      code: resetPwdCode,
+      expiryTime: codeExpiry,
+    };
+
+    await ResetPwdCodeModel.create({
+      ...resetpwdCodeModelObj,
+      logging: (sql, queryObject) => {
+        Utils.loglastExecuteQueryToWinston(
+          `Created reset password code for the user: ${user.userId}`,
+          sql
+        );
+      },
+    }).catch(errHandler);
+
+    let pwdresetcode_template = (emailtemplates.sendpasswordresetcode);
+    pwdresetcode_template = pwdresetcode_template.replace("[user_name]", userName);
+    pwdresetcode_template = pwdresetcode_template.replace("[reset_pwd_code]", resetPwdCode);
+
+
+    const mailData = {
+      from: "ssr.sudhakar@gmail.com", // sender address
+      to: email, // list of receivers
+      subject: "Reset password code",
+      text: "That was easy!",
+      html: pwdresetcode_template,
+    };
+
+    await Utils.sendMail(mailData);
     
     return user
       ? await Utils.returnResult("user", user)
       : await Utils.returnResult("user", user, "No record found");
-  }
+  },
+  resetpassword: async (reqObj) => {
+    const user = await Utils.findOne({
+      model: UserModel,
+      excludes: ["password", "referrer"],
+      fetchRowCond: {
+        [Op.or]: [{ email: reqObj.email}],
+      },
+    });
+
+    if (!user.resultSet) {
+      user.ValidationErrors = {
+        Error: "Invalid userId, please chek your userid",
+      };
+      return await Utils.returnResult("passwordReset", user);
+    }
+
+    //check whether entered code is belongs to this user or not
+
+    const code = await Utils.findOne({
+      model: ResetPwdCodeModel,
+      excludes: ["createdAt", "updatedAt"],
+      fetchRowCond: { email: reqObj.email },
+      order:['resetpwdcodeId', 'DESC']
+    });
+
+    if( code.resultSet.code !== reqObj.code) {
+      user.ValidationErrors = {
+        Error: "Enter code is not valid",
+      };
+      return await Utils.returnResult("sendpasswordresetcode", user);
+    }
+    
+    const setPassword = { password: md5(reqObj.password) };
+    const cond = {
+      where: { email: reqObj.email }
+    };
+
+    const updateResp = await Utils.updateData(UserModel, setPassword, cond);
+
+    if (updateResp.error) {
+      user.DBErrors = {
+        Error: "Failed to reset password kindly contact admin",
+      };
+    }
+
+    //delete the activation code
+    await ResetPwdCodeModel.destroy({
+      where: { email: reqObj.email },
+    });
+    return await Utils.returnResult("passwordReset", user);
+  },
+  
 });

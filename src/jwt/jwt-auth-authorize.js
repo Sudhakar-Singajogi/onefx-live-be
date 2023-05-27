@@ -96,8 +96,29 @@ async function generateToken(user, type) {
 }
 
 const jwtAuthorise = (feature = null, functionality = null) => {
-  
-};
+  return async (req, res, next) => {
+    const refreshToken = req.headers["refreshtoken"];
+    const token = req.headers["x-access-token"];
+    console.log('request headers', req.headers);
+    console.log("refreshToken", refreshToken);
+
+    if (!token) {
+      return res.status(401).json(APPCONS.ACCESSTOKENREQUIRED);
+    }
+
+    jwt.verify(token, APPCONS.ACCESS_TOKEN_SECRET, async (err, user) => {
+      if (!err) {
+        req.user = user;
+        next();
+      } else {
+        console.log("Invalid Access Token check the refresh token");
+        //return res.status(202).json(APPCONS.INVALIDTOKEN);
+        req.invalidToken = APPCONS.INVALIDTOKEN;
+        next();
+      }
+    })
+  }
+}
 
 module.exports = {
   jwtAuthenticate,
