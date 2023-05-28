@@ -7,9 +7,6 @@ const ActivationCodeModel = require(path.resolve(
 ));
 const emailtemplates = require(path.resolve("src/emailtemplates/templates"));
 
-console.log('email templates:', emailtemplates.sendpasswordresetcode)
-
-
 const { Op } = require("sequelize");
 const md5 = require("md5");
 
@@ -298,9 +295,7 @@ var self = (module.exports = {
     const user = await Utils.findOne({
       model: UserModel,
       excludes: ["password", "referrer"],
-      fetchRowCond: {
-        [Op.or]: [{ email: reqObj.email}],
-      },
+      fetchRowCond: {  email: reqObj.email },
     });
 
     if (!user.resultSet) {

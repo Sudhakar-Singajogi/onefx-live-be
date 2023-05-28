@@ -40,7 +40,7 @@ router.get("/users", jwtAuthorise(), async(req, res) => {
     req.offset = 0;
     req.limit = 10;
     req.cond = {status:"1"};
-    console.log('invalidToken:', req)
+    
     var resultSet = await Service.getUsers(req); 
 
     await Utils.retrunResponse(res, resultSet);

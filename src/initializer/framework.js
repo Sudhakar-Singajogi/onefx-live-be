@@ -6,6 +6,8 @@ const { method } = require("lodash");
 const Joi = require("joi");
 const Utils = require(path.resolve("src/utils"));
 const cors = require("cors");
+const device = require('express-device');
+
 /** Add the modules entity here */
 
 const Sequelize = require("sequelize"); 
@@ -47,6 +49,8 @@ const joiMiddleware = (schema, property = false) => {
 };
 
 const connectRouters = (app) => {
+  app.use(device.capture());
+
   modules.modules.forEach((element) => {
     const currentElement = element.toLowerCase();
     console.log("currentElement: " + currentElement);
