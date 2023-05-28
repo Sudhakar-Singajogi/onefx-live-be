@@ -215,8 +215,7 @@ var self = (module.exports = {
       model: UserModel,
       excludes: ["password", "referrer"],
       fetchRowCond: {
-        [Op.or]: [{ email: reqObj.userId }, { userName: reqObj.userId }],
-        [Op.and]: [{ password: md5(reqObj.password) }, { status: 1 }],
+        [Op.and]: [{ email: reqObj.email }, { password: md5(reqObj.password) }, { status: 1 }],
       },
     });
 
