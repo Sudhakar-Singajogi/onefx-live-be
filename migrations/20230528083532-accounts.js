@@ -3,16 +3,24 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     queryInterface.createTable("accounts", {
-      accounttokenId: {
+      accountId: {
         type: Sequelize.INTEGER(11),
         primaryKey: true,
         autoIncrement: true,
+      },
+      name: {
+        type: Sequelize.STRING(256),
+        allowNull: false,
       },
       value: {
         type: Sequelize.STRING(256),
         allowNull: false,
       },
       tenure: {
+        type: Sequelize.INTEGER(11),
+        allowNull: false,
+      },
+      accounttypeId: {
         type: Sequelize.INTEGER(11),
         allowNull: false,
       },
