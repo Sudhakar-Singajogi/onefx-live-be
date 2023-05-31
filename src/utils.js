@@ -27,7 +27,7 @@ async function returnResult(
   customMsg = null,
   totalRecords = null
 ) {
-  console.log("got obj as", object);
+  // console.log("got obj as", object);
   if (object && !object.hasOwnProperty("ValidationErrors")  && !object.hasOwnProperty("DBErrors") ) {
     return customMsg != null
       ? { message: customMsg, result: [] }
@@ -67,7 +67,7 @@ async function returnResult(
 }
 
 async function retrunResponse(res, Obj) {
-  // console.log("got obj", Obj);
+  console.log("got object as ", Obj);
   let ValidationErrors = "";
 
   let resultCode = 200;
@@ -97,18 +97,20 @@ async function retrunResponse(res, Obj) {
     resultCode = 401;
     Obj.message = Obj.message.split(" for key")[0].replace(/'/g, "");
   }
-
   
+  data = (Obj.result.hasOwnProperty('resultSet')) ? Obj.result.resultSet: Obj.result; 
+  resultTotal = (Obj.result.hasOwnProperty('resultSet')) ? Obj.result.resultSet.length : Obj.result.length;
+  hasMore = (Obj.result.hasOwnProperty('resultSet')) ? Obj.totalRows > Obj.result.resultSet.length : Obj.totalRows > Obj.result.length 
 
   return res.status(resultCode).json({
     result: "OK",
     resultCode: resultCode,
     message: Obj.message,
     ValidationErrors: ValidationErrors,
-    data: Obj.result,
-    resultTotal: Obj.result.length,
+    data: data,
+    resultTotal: resultTotal,
     totalRows: Obj.totalRows,
-    hasMore: Obj.totalRows > Obj.result.length,
+    hasMore: hasMore,
   });
 }
 
@@ -370,6 +372,9 @@ async function getTotalRows(
 async function fetchRows(obj) {
   const model = obj.model;
   try {
+    
+    console.log('fetchCondi:', obj.fetchRowsCond);
+
     var params = {
       where: obj.fetchRowsCond,
       attributes: {
@@ -537,8 +542,6 @@ async function findAll(obj) {
       errorMs: e,
     };
   }
-
-  return resultSet ? resultSet : [];
 }
 
 async function findOne(obj) {
@@ -546,21 +549,23 @@ async function findOne(obj) {
     attributes: {
       exclude: ["createdAt", "updatedAt"],
     },
-  };
+  };  
 
-  if(obj.hasOwnProperty('excludes')) {    
-    params.attributes.exclude = [...params.attributes.exclude, ...obj.excludes ];
+  if( obj.hasOwnProperty('includes'))  {
+    params.attributes.include = obj.includes;
   }
 
+  if(obj.hasOwnProperty('excludes')) {
+    params.attributes.exclude = [...params.attributes.exclude, ...obj.excludes ];
+  }
+  
   if (obj.hasOwnProperty("fetchRowCond")) {
     params.where = obj.fetchRowCond;
   }
 
   if(obj.hasOwnProperty("order")) {
     params.order = [obj.order]
-  }
-
-  console.log('props', params)
+  }  
 
   const model = obj.model;
   try {

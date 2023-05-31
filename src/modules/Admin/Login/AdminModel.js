@@ -2,8 +2,8 @@ const Sequelize = require("sequelize");
 const path = require("path");
 const sequelize = require(path.resolve("src/dbconn/connection"));
 
-module.exports = sequelize.define("users", {
-  userId: {
+module.exports = sequelize.define("admins", {
+  adminId: {
     type: Sequelize.INTEGER(11),
     primaryKey: true,
     autoIncrement: true,
@@ -17,18 +17,15 @@ module.exports = sequelize.define("users", {
     type: Sequelize.STRING(30),
     allowNull: false,
   },
-  referrer:{
-    type: Sequelize.INTEGER(11),
-    allowNull: true,
-  },
-  role:{
-    type: Sequelize.STRING(30),
-    allowNull: false,
-  },
   status: {
     type: Sequelize.ENUM("1", "0"),
     allowNull: false,
     defaultValue: "0",
+  },
+  role: {
+    type: Sequelize.STRING(256),
+    allowNull: false,
+    defaultValue: "admin",
   },
 });
 

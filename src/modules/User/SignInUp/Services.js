@@ -1,11 +1,14 @@
 const path = require("path");
 const Utils = require(path.resolve("src/utils"));
 const UserModel = require(path.resolve("src/modules/User/SignInUp/Users"));
-const ResetPwdCodeModel = require(path.resolve("src/modules/User/SignInUp/ResetPasswordCodes"));
+const ResetPwdCodeModel = require(path.resolve(
+  "src/modules/User/SignInUp/ResetPasswordCodes"
+));
 const ActivationCodeModel = require(path.resolve(
   "src/modules/User/SignInUp/ActivationCodes"
 ));
 const emailtemplates = require(path.resolve("src/emailtemplates/templates"));
+const { getReferrals } = require(path.resolve("src/businesslogic"));
 
 const { Op } = require("sequelize");
 const md5 = require("md5");
@@ -15,7 +18,7 @@ const errHandler = (err) => {
 };
 
 const bringUsers = async (obj) => {
-  const excludeFields = ["createdAt", "updatedAt"];
+  const excludeFields = ["createdAt", "updatedAt", "password"];
 
   let orderBy = ["userId", "DESC"];
   if (obj.hasOwnProperty("orderBy")) {
@@ -31,7 +34,7 @@ const bringUsers = async (obj) => {
     orderBy,
   };
 
-  if (obj.hasOwnProperty("offset")) {
+  if (obj.hasOwnProperty("offSet")) {
     fetchObjParams.offSet = obj.offSet;
     fetchObjParams.limit = obj.limit;
   }
@@ -51,21 +54,38 @@ var self = (module.exports = {
       var cond = {
         userid: reqObj.userId,
       };
-      const users = await bringUsers(cond);
-      if (users) {
-        delete users.success;
-        delete users.message;
+
+      const user = await Utils.findOne({
+        model: UserModel,
+        excludes: ["password", "role"],
+        fetchRowCond: {
+          [Op.and]: [{ userid: reqObj.userId }, { status: 1 }],
+        },
+      });
+
+      console.log("user is:", user);
+
+      if (!user.resultSet) {
+        user.ValidationErrors = {
+          Error: "Invalid credentials, please chek your userid and password",
+        };
+        return await Utils.returnResult("userCreation", user);
+      }
+      if (user) {
+        delete user.success;
+        delete user.message;
 
         //get the users who has been referred by this user
-        const referredUsers = await bringUsers({
+        const refferalusers = await bringUsers({
           cond: { referrer: reqObj.userId },
         });
-        if (referredUsers) {
-          users.refferalusers = referredUsers.resultSet;
-        }
-        //get the total
 
-        return await Utils.returnResult("users", users, null, 1);
+        if (refferalusers.resultSet) {
+          user.resultSet.referrer = refferalusers.resultSet;          
+          await user.resultSet.save();
+        }
+
+        return await Utils.returnResult("users", user, null, 1);
       } else {
         return await Utils.returnResult("users", false, "No records found");
       }
@@ -75,7 +95,7 @@ var self = (module.exports = {
   },
   getUsers: async (reqObj) => {
     try {
-      var cond = reqObj.cond;
+      var cond = reqObj.hasOwnProperty("cond") ? reqObj.cond : {};
 
       const totalResults = await Utils.getTotalRows(
         cond,
@@ -90,6 +110,7 @@ var self = (module.exports = {
         reqObj.limit,
         totalResults
       );
+
       if (typeof offSet != "number") {
         return await Utils.returnResult("Users", false, offSet[0], null);
       }
@@ -115,7 +136,8 @@ var self = (module.exports = {
     }
   },
   signUp: async (reqObj) => {
-    const dummyUser = reqObj.body;
+    console.log('new user is:', reqObj)
+    const dummyUser = reqObj;
     const newUser = await UserModel.create({
       ...dummyUser,
       logging: (sql, queryObject) => {
@@ -212,9 +234,14 @@ var self = (module.exports = {
       model: UserModel,
       excludes: ["password", "referrer"],
       fetchRowCond: {
-        [Op.and]: [{ email: reqObj.email }, { password: md5(reqObj.password) }, { status: 1 }],
+        [Op.and]: [
+          { email: reqObj.email },
+          { password: md5(reqObj.password) },
+          { status: 1 },
+        ],
       },
     });
+    console.log('service user is:', user)
 
     if (!user.resultSet) {
       user.ValidationErrors = {
@@ -272,10 +299,15 @@ var self = (module.exports = {
       },
     }).catch(errHandler);
 
-    let pwdresetcode_template = (emailtemplates.sendpasswordresetcode);
-    pwdresetcode_template = pwdresetcode_template.replace("[user_name]", userName);
-    pwdresetcode_template = pwdresetcode_template.replace("[reset_pwd_code]", resetPwdCode);
-
+    let pwdresetcode_template = emailtemplates.sendpasswordresetcode;
+    pwdresetcode_template = pwdresetcode_template.replace(
+      "[user_name]",
+      userName
+    );
+    pwdresetcode_template = pwdresetcode_template.replace(
+      "[reset_pwd_code]",
+      resetPwdCode
+    );
 
     const mailData = {
       from: "ssr.sudhakar@gmail.com", // sender address
@@ -286,7 +318,7 @@ var self = (module.exports = {
     };
 
     await Utils.sendMail(mailData);
-    
+
     return user
       ? await Utils.returnResult("user", user)
       : await Utils.returnResult("user", user, "No record found");
@@ -295,7 +327,7 @@ var self = (module.exports = {
     const user = await Utils.findOne({
       model: UserModel,
       excludes: ["password", "referrer"],
-      fetchRowCond: {  email: reqObj.email },
+      fetchRowCond: { email: reqObj.email },
     });
 
     if (!user.resultSet) {
@@ -311,19 +343,19 @@ var self = (module.exports = {
       model: ResetPwdCodeModel,
       excludes: ["createdAt", "updatedAt"],
       fetchRowCond: { email: reqObj.email },
-      order:['resetpwdcodeId', 'DESC']
+      order: ["resetpwdcodeId", "DESC"],
     });
 
-    if( code.resultSet.code !== reqObj.code) {
+    if (code.resultSet.code !== reqObj.code) {
       user.ValidationErrors = {
         Error: "Enter code is not valid",
       };
       return await Utils.returnResult("sendpasswordresetcode", user);
     }
-    
+
     const setPassword = { password: md5(reqObj.password) };
     const cond = {
-      where: { email: reqObj.email }
+      where: { email: reqObj.email },
     };
 
     const updateResp = await Utils.updateData(UserModel, setPassword, cond);
@@ -340,5 +372,4 @@ var self = (module.exports = {
     });
     return await Utils.returnResult("passwordReset", user);
   },
-  
 });
