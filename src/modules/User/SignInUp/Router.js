@@ -50,7 +50,6 @@ router.get("/users", jwtAuthorise(), async (req, res) => {
 });
 
 router.post("/", joiMiddleware(signUpSchema), async (req, res) => {
-  const randomString = await Utils.generateRandomString(8);
   const reqBody = {
     ...req.body,
     password: md5(req.body.password),

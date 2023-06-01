@@ -21,9 +21,25 @@ module.exports = sequelize.define("users", {
     type: Sequelize.INTEGER(11),
     allowNull: true,
   },
+  firstName:{
+    type: Sequelize.STRING(30),
+    allowNull: true,
+  },
+  lastName:{
+    type: Sequelize.STRING(30),
+    allowNull: true,
+  },
+  dob:{
+    type: Sequelize.DATE(),
+    allowNull: true,
+  },
+  address:{
+    type: Sequelize.TEXT(),
+    allowNull: true,
+  },
   role:{
     type: Sequelize.STRING(30),
-    allowNull: false,
+    allowNull: true,
   },
   status: {
     type: Sequelize.ENUM("1", "0"),
