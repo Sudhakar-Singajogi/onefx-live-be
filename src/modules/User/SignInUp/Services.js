@@ -372,4 +372,92 @@ var self = (module.exports = {
     });
     return await Utils.returnResult("passwordReset", user);
   },
+  updateUser: async(reqObj) => {
+    let condName = { userId: reqObj.userId, };
+    let excludeFields = ["createdAt", "updatedAt"];
+    let user = await Utils.findOne({
+      fetchRowCond: condName,
+      model: UserModel,
+      excludes: excludeFields,
+    });
+    
+    if(!user.resultSet) {
+      user.ValidationErrors = {
+        Error: "User does not exists, please chek your userid",
+      };
+      return await Utils.returnResult("userCreation", user);
+    }
+
+    let updatedFields = {};
+    
+
+    if (reqObj.hasOwnProperty("email")) {
+      updatedFields.email = reqObj.email;
+    }
+
+    if (reqObj.hasOwnProperty("password")) {
+      updatedFields.password = reqObj.password;
+    }
+    if (reqObj.hasOwnProperty("referrer")) {
+      updatedFields.referrer = reqObj.referrer;
+    }
+    if (reqObj.hasOwnProperty("firstName")) {
+      updatedFields.firstName = reqObj.firstName;
+    }
+    if (reqObj.hasOwnProperty("lastName")) {
+      updatedFields.lastName = reqObj.lastName;
+    }
+    if (reqObj.hasOwnProperty("dob")) {
+      updatedFields.dob = reqObj.dob;
+    }
+    if (reqObj.hasOwnProperty("address")) {
+      updatedFields.address = reqObj.address;
+    }
+    
+    try {
+      await user.resultSet.update(updatedFields); 
+    } catch (error) {
+      Utils.loglastExecuteQueryToWinston("Updating a user", error);
+      user.ValidationErrors = {
+        Error: "Failed to update the user",
+      };
+      return await Utils.returnResult("userCreation", user);
+    }
+    
+    return await Utils.returnResult("userCreation", user);
+  },
+  deleteUser: async(userId) => {
+    let condName = { userId: userId};
+    let excludeFields = ["createdAt", "updatedAt"];
+    let user = await Utils.findOne({
+      fetchRowCond: condName,
+      model: UserModel,
+      excludes: excludeFields,
+    });
+
+    console.log('user is:', user);
+
+    
+    if(!user.resultSet) {
+      user.ValidationErrors = {
+        Error: "User does not exists, please chek your userid",
+      };
+      return await Utils.returnResult("userCreation", user);
+    }
+
+    
+    const cond = {where: condName};
+
+    const updateResp = await Utils.updateData(UserModel, {"status":'0'}, cond);
+
+    if (updateResp.error) {
+      user.DBErrors = {
+        Error: "Failed to reset password kindly contact admin",
+      };
+    }
+    user.resultSet.status='0';
+    user.resultSet.save();    
+    return await Utils.returnResult("userupdation", user);
+    
+  }
 });

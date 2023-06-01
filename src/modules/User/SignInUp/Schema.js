@@ -2,6 +2,7 @@ const Joi = require("joi");
 const signUpSchema = Joi.object().keys({
   email: Joi.string().email().required().min(7),
   password: Joi.string().min(6).max(12).required(),
+  referrer:Joi.number().optional()
 });
 
 const signInSchema = Joi.object().keys({ 
@@ -12,7 +13,6 @@ const signInSchema = Joi.object().keys({
 const passwordresetcode = Joi.object().keys({ 
   email: Joi.string().required().email(), 
 });
-
 
 const resetpassword = Joi.object().keys({
   email: Joi.string().required().email(),
@@ -37,10 +37,21 @@ const resetpassword = Joi.object().keys({
 
 })
 
+const edituser = Joi.object().keys({
+  email:Joi.string().email().optional(),
+  password:Joi.string().min(6).max(12).optional(),
+  firstName:Joi.string().optional(),
+  lastName:Joi.string().optional(),
+  dob:Joi.string().optional(),
+  address:Joi.string().optional(),
+  referrer:Joi.number().optional()
+})
+
 const schemas = {
     signUpSchema,
     signInSchema,
     resetpassword,
-    passwordresetcode
+    passwordresetcode,
+    edituser
 };
 module.exports = schemas;
